@@ -1,0 +1,14 @@
+# Python 3.10+ recommended
+
+# Data processing
+pandas
+tqdm
+
+# Visualization for table OCR rendering
+matplotlib
+
+# NLP preprocessing
+spacy
+
+# LLM / VL client
+lmstudio

@@ -1,0 +1,17 @@
+# Versions aligned with the `minepy311` environment.
+
+# Core data processing
+pandas==2.2.3
+tqdm==4.67.3
+
+# Table rendering for OCR review
+matplotlib==3.10.8
+
+# NLP preprocessing
+spacy==3.7.4
+
+# LLM / VL client
+lmstudio==1.5.0
+
+# Extra spaCy model required by step 01:
+# python -m spacy download en_core_web_sm

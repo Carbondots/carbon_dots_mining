@@ -1,0 +1,25 @@
+# Versions aligned with the `minepy311` environment when available.
+
+# Core data processing
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.8.0
+
+# NLP and semantic similarity
+spacy==3.7.4
+sentence-transformers==5.2.2
+torch==2.6.0
+
+# Text cleanup
+pylatexenc==2.10
+
+# LLM client
+lmstudio==1.5.0
+
+# PDF to markdown
+# `magic-pdf` is required by `synthesis_mining/01_pdf_to_markdown.py`,
+# but it is not installed in `minepy311`, so no verified version is pinned here.
+magic-pdf
+
+# Extra spaCy model required by step 04:
+# python -m spacy download en_core_web_sm

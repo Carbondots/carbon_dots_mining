@@ -1,0 +1,20 @@
+# Python 3.10+ recommended
+
+# Data processing
+numpy
+pandas
+scikit-learn
+
+# NLP and semantic similarity
+spacy
+sentence-transformers
+torch
+
+# Latex cleaning
+pylatexenc
+
+# LLM client
+lmstudio
+
+# PDF to markdown pipeline
+magic-pdf
