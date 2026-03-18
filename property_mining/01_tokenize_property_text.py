@@ -258,7 +258,20 @@ def trim_blocks_before_first_h1(blocks: List[Block]) -> List[Block]:
 
 
 def stabilize_block_sections(blocks: List[Block], verbose: bool = False) -> None:
-    main_sections = {"abstract", "intro", "methods", "results_discussion", "conclusion"}
+    """
+    仅执行区间规则（无全局单调）：
+    Step-2:
+      - intro→methods：区间内 unknown → intro
+      - methods→results_discussion：区间内 全部标记（含 ignore，除 abstract）→ methods
+    Step-3:
+      - results_discussion→conclusion：区间内 全部标记（含 ignore，除 abstract）→ results_discussion
+    Step-4:
+      - 对任意正向跨级 l1→l2（ORDER[l1]+1 < ORDER[l2]），且“被跳过阶段在全文完全不存在”时，
+        仅把区间内 unknown → l2（其他不动）
+    Step-5:
+      - 若全文所有 block 都是 unknown，则统一改为 intro
+    """
+    main5 = {"abstract", "intro", "methods", "results_discussion", "conclusion"}
     order = {"abstract": 0, "intro": 1, "methods": 2, "results_discussion": 3, "conclusion": 4}
 
     def build_anchors():
@@ -266,12 +279,18 @@ def stabilize_block_sections(blocks: List[Block], verbose: bool = False) -> None
         last = None
         for idx, block in enumerate(blocks):
             label = block.main_section_norm
-            if label in main_sections and label != last:
+            if label in main5 and label != last:
                 anchors.append((idx, label))
                 last = label
         return anchors
 
-    def reassign(lo: int, hi: int, target: str, unknown_only: bool, include_ignore: bool) -> None:
+    def reassign_range(lo: int, hi: int, target: str, *, unknown_only: bool, include_ignore: bool) -> int:
+        """
+        改写开区间 (lo, hi) 内的块为 target。
+        - unknown_only=True 仅改 unknown；否则改全部允许的标签
+        - include_ignore=True 允许改写 ignore；abstract 永远不改
+        """
+        changed = 0
         for idx in range(lo + 1, hi):
             label = blocks[idx].main_section_norm
             if label == "abstract":
@@ -281,53 +300,76 @@ def stabilize_block_sections(blocks: List[Block], verbose: bool = False) -> None
             if unknown_only:
                 if label == "unknown":
                     blocks[idx].main_section_norm = target
-            elif label != target:
-                blocks[idx].main_section_norm = target
+                    changed += 1
+            else:
+                if label != target:
+                    blocks[idx].main_section_norm = target
+                    changed += 1
+        return changed
 
+    # -------- Step-2：邻级稳定化（两段） --------
+    # 2a) intro → methods：unknown → intro
     anchors = build_anchors()
-    for idx in range(len(anchors) - 1):
-        a_idx, a_label = anchors[idx]
-        b_idx, b_label = anchors[idx + 1]
-        if a_label == "intro" and b_label == "methods":
-            reassign(a_idx, b_idx, target="intro", unknown_only=True, include_ignore=False)
+    if anchors:
+        for idx in range(len(anchors) - 1):
+            left_idx, left_label = anchors[idx]
+            right_idx, right_label = anchors[idx + 1]
+            if left_label == "intro" and right_label == "methods":
+                reassign_range(left_idx, right_idx, target="intro", unknown_only=True, include_ignore=False)
 
+    # 2b) methods → results_discussion：全部（含 ignore，除 abstract）→ methods
     anchors = build_anchors()
-    for idx in range(len(anchors) - 1):
-        a_idx, a_label = anchors[idx]
-        b_idx, b_label = anchors[idx + 1]
-        if a_label == "methods" and b_label == "results_discussion":
-            reassign(a_idx, b_idx, target="methods", unknown_only=False, include_ignore=True)
+    if anchors:
+        for idx in range(len(anchors) - 1):
+            left_idx, left_label = anchors[idx]
+            right_idx, right_label = anchors[idx + 1]
+            if left_label == "methods" and right_label == "results_discussion":
+                reassign_range(left_idx, right_idx, target="methods", unknown_only=False, include_ignore=True)
 
+    # -------- Step-3：results_discussion → conclusion：全部（含 ignore，除 abstract）→ results_discussion --------
     anchors = build_anchors()
-    for result_pos, (result_idx, result_label) in enumerate(anchors):
-        if result_label != "results_discussion":
-            continue
-        conclusion_pos = None
-        for next_pos in range(result_pos + 1, len(anchors)):
-            if anchors[next_pos][1] == "conclusion":
-                conclusion_pos = next_pos
-                break
-        if conclusion_pos is None:
-            continue
-        conclusion_idx = anchors[conclusion_pos][0]
-        reassign(result_idx, conclusion_idx, target="results_discussion", unknown_only=False, include_ignore=True)
-
-    anchors = build_anchors()
-    present = {block.main_section_norm for block in blocks if block.main_section_norm in main_sections}
-    order_seq = ["intro", "methods", "results_discussion", "conclusion"]
-    for i in range(len(anchors) - 1):
-        left_idx, left_label = anchors[i]
-        for j in range(i + 1, len(anchors)):
-            right_idx, right_label = anchors[j]
-            if order[left_label] + 1 >= order[right_label]:
+    if anchors:
+        for result_pos, (result_idx, result_label) in enumerate(anchors):
+            if result_label != "results_discussion":
                 continue
-            skipped = [sec for sec in order_seq if order[left_label] < order[sec] < order[right_label]]
-            if all(section not in present for section in skipped):
-                reassign(left_idx, right_idx, target=right_label, unknown_only=True, include_ignore=False)
+            conclusion_pos = None
+            for next_pos in range(result_pos + 1, len(anchors)):
+                if anchors[next_pos][1] == "conclusion":
+                    conclusion_pos = next_pos
+                    break
+            if conclusion_pos is None:
+                continue
+            conclusion_idx, _ = anchors[conclusion_pos]
+            reassign_range(result_idx, conclusion_idx, target="results_discussion", unknown_only=False, include_ignore=True)
+
+    # -------- Step-4：跨级修补（仅 unknown，且“被跳过阶段全篇缺失”才触发）--------
+    anchors = build_anchors()
+    present = {block.main_section_norm for block in blocks if block.main_section_norm in main5}
+    if anchors:
+        order_seq = ["intro", "methods", "results_discussion", "conclusion"]
+        for i in range(len(anchors) - 1):
+            left_idx, left_label = anchors[i]
+            for j in range(i + 1, len(anchors)):
+                right_idx, right_label = anchors[j]
+                if order[left_label] + 1 < order[right_label]:
+                    skipped = [sec for sec in order_seq if order[left_label] < order[sec] < order[right_label]]
+                    if all(section not in present for section in skipped):
+                        reassign_range(left_idx, right_idx, target=right_label, unknown_only=True, include_ignore=False)
+
+    # -------- Step-5：全文兜底 --------
+    if blocks and all(block.main_section_norm == "unknown" for block in blocks):
+        for block in blocks:
+            block.main_section_norm = "intro"
+        if verbose:
+            print("[STABILIZE] all blocks were unknown -> reassigned all to intro")
 
     if verbose:
-        sample = [(block.block_id, block.main_section_norm, block.main_header_text) for block in blocks[:10]]
-        print(f"[STABILIZE] {sample}")
+        sample = [
+            (block.block_id, block.main_section_norm, block.main_header_text)
+            for block in blocks
+            if block.main_section_norm in main5 or block.main_section_norm == "unknown"
+        ]
+        print(f"[STABILIZE] done. sample={sample[:10]}")
 
 
 def _doc_total_lines_from_blocks(blocks: List[Block]) -> int:
@@ -910,7 +952,7 @@ def process_one_paper(
         return False
 
     paragraph_dir = os.path.join(paper_dir, "property", "Paragraphs")
-    token_dir = os.path.join(paper_dir, "property", "Tokenized")
+    token_dir = os.path.join(paper_dir, "preprocess", "Tokenized")
     paragraph_base = os.path.join(paragraph_dir, paper_id)
     token_base = os.path.join(token_dir, paper_id)
 

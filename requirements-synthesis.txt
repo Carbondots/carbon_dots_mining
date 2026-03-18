@@ -17,9 +17,10 @@ pylatexenc==2.10
 lmstudio==1.5.0
 
 # PDF to markdown
-# `magic-pdf` is required by `synthesis_mining/01_pdf_to_markdown.py`,
+# `magic-pdf` is required by `preprocess/01_pdf_to_markdown.py`,
 # but it is not installed in `minepy311`, so no verified version is pinned here.
 magic-pdf
 
-# Extra spaCy model required by step 04:
+# Extra spaCy model required by `preprocess/04_tokenize_markdown.py`
+# and `synthesis_mining/01_cos_tokenize.py`:
 # python -m spacy download en_core_web_sm

@@ -1,32 +1,26 @@
 # Carbon Dot Literature Mining Pipelines
 
-This repository provides two coordinated text-mining pipelines for carbon dot literature. The project is designed to transform paper-level source documents into structured outputs for synthesis conditions and reported properties.
+This repository organizes the carbon-dot literature workflow into three coordinated folders:
 
-At a high level, the repository supports the following tasks:
+- `preprocess/`: shared preprocessing steps `01` to `04`
+- `synthesis_mining/`: synthesis-only steps `01` to `09` corresponding to global pipeline steps `05` to `13`
+- `property_mining/`: property-only steps `01` to `14`
 
-- preprocessing article text into reusable document-level mining folders,
-- extracting sample-level synthesis parameters into structured tables,
-- extracting sample-level property statements and converting them into normalized letter-table outputs.
+The goal is to turn paper-level source files into reusable mining folders, then export structured synthesis and property tables with traceable intermediate results.
 
-## Repository Scope
+## End-to-End Flow
 
-The repository is organized around two complementary workflows:
+1. `preprocess/` converts source PDFs into document-level folders and shared sentence-level artifacts under `preprocess/`.
+2. `synthesis_mining/` consumes the shared preprocessing outputs and writes sample-level synthesis results to `Synthesis/letter_table/<id>.csv`.
+3. `property_mining/` reuses the preprocessing outputs together with synthesis-side sample context and writes normalized property outputs to `property/letter_table/<id>.csv`.
 
-- **Synthesis mining** converts article PDFs into structured synthesis records, including sample names, reaction conditions, reagents, solvents, and purification information.
-- **Property mining** processes pre-cut article text together with synthesis-side sample information to identify, refine, resolve, and export reported property statements.
+## Folder Guides
 
-Both workflows operate on per-paper directory structures and write stepwise outputs back into the corresponding mining folders, which makes the full process traceable from raw document inputs to final tabular results.
+- [Preprocess README](./preprocess/README.md)
+- [Synthesis Mining README](./synthesis_mining/README.md)
+- [Property Mining README](./property_mining/README.md)
 
-## Workflow Overview
+## Dependency Files
 
-The overall project flow can be summarized as:
-
-1. Article text is prepared and organized into document-specific mining folders.
-2. The synthesis pipeline identifies synthesis-related passages and exports structured synthesis tables for each paper.
-3. The property pipeline uses document evidence and sample context to extract and normalize reported property information.
-4. Final outputs are written as paper-level structured CSV files inside the corresponding workflow folders.
-
-## Pipeline Guides
-
-- [Synthesis Mining README](./synthesis_mining/synthesis_mining_readme.md)
-- [Property Mining README](./property_mining/property_mining_readme.md)
+- Synthesis workflow: [`requirements-synthesis.txt`](./requirements-synthesis.txt)
+- Property workflow: [`requirements-property.txt`](./requirements-property.txt)

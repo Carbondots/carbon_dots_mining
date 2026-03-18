@@ -203,7 +203,7 @@ def process_one_paper(
     if paper_id is None:
         return False
 
-    token_csv = os.path.join(paper_dir, "property", "Tokenized", f"{paper_id}.csv")
+    token_csv = os.path.join(paper_dir, "preprocess", "Tokenized", f"{paper_id}.csv")
     if not os.path.exists(token_csv):
         print(f"[SKIP] {paper_id}: Tokenized csv not found.")
         return False

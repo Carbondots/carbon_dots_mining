@@ -364,7 +364,7 @@ def load_document_context_text(document_dir: Path) -> str:
 
     candidate_paths = [
         document_dir / "preprocess" / "cut" / f"{document_id}_cut.md",
-        document_dir / "Synthesis" / "Tokenized" / f"{document_id}.md",
+        document_dir / "Synthesis" / "cos_tokenized" / f"{document_id}.md",
         document_dir / "Synthesis" / "LLM_abstract_qwen2.5vl" / f"{document_id}.md",
         document_dir / "Synthesis" / "LLM_name_qwen2.5vl" / f"{document_id}.md",
     ]
